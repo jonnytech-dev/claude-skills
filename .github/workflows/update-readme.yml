@@ -30,7 +30,66 @@ jobs:
         run: pip install pyyaml
       
       - name: Generate README
-        run: python generate-readme.py
+        run: |
+          python3 << 'ENDPYTHON'
+          import os
+          import re
+          import yaml
+          
+          SKILLS_DIR = "skills"
+          README_FILE = "README.md"
+          
+          def extract_frontmatter(skill_path):
+              try:
+                  with open(skill_path, 'r') as f:
+                      content = f.read()
+                  match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+                  if match:
+                      return yaml.safe_load(match.group(1))
+              except Exception as e:
+                  print(f"Error: {e}")
+              return None
+          
+          skills = []
+          if os.path.isdir(SKILLS_DIR):
+              for skill_name in sorted(os.listdir(SKILLS_DIR)):
+                  skill_path = os.path.join(SKILLS_DIR, skill_name)
+                  skill_md = os.path.join(skill_path, "SKILL.md")
+                  if os.path.isdir(skill_path) and os.path.isfile(skill_md):
+                      metadata = extract_frontmatter(skill_md)
+                      if metadata:
+                          skills.append(metadata)
+          
+          readme = """# Claude Skills Repository
+          
+          A collection of custom Claude skills for productivity, content creation, faith documentation, and technical education.
+          
+          ## 📚 Skills Directory
+          
+          """
+          
+          for i, skill in enumerate(skills, 1):
+              name = skill.get('name', 'Unknown')
+              desc = skill.get('description', 'No description')
+              readme += f"### {i}. **{name}**\n{desc}\n\n---\n\n"
+          
+          readme += """## 🚀 How to Use
+          
+          1. Download `.skill` file
+          2. Install in Claude.ai
+          3. Use trigger phrases
+          
+          ---
+          
+          **Built with:** Claude AI  
+          **Maintained by:** Jon Taylor (JonnyTech)
+          """
+          
+          with open(README_FILE, 'w') as f:
+              f.write(readme)
+          
+          print(f"✅ README updated with {len(skills)} skills")
+          ENDPYTHON
       
       - name: Commit and push changes
         run: |
