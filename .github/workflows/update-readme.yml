@@ -6,14 +6,11 @@ permissions:
 on:
   push:
     branches: [main]
-    paths:
-      - 'skills/**'
   workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v3
       
@@ -23,45 +20,45 @@ jobs:
       
       - run: pip install pyyaml
       
-      - name: Generate README from skills
-        working-directory: ${{ github.workspace }}
+      - name: Generate README from .skill files
         run: |
-          pwd
-          python3 << 'ENDPYTHON'
+          python3 << 'EOF'
           import os
           import re
           import yaml
-          
-          SKILLS_DIR = "skills"
-          README_FILE = "README.md"
-          
-          print(f"Current directory: {os.getcwd()}")
-          print(f"Skills dir exists: {os.path.isdir(SKILLS_DIR)}")
-          
-          def extract_frontmatter(skill_path):
-              try:
-                  with open(skill_path, 'r') as f:
-                      content = f.read()
-                  match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
-                  if match:
-                      return yaml.safe_load(match.group(1))
-              except Exception as e:
-                  print(f"Error: {e}")
-              return None
+          import zipfile
+          import glob
           
           skills = []
-          if os.path.isdir(SKILLS_DIR):
-              for skill_name in sorted(os.listdir(SKILLS_DIR)):
-                  skill_path = os.path.join(SKILLS_DIR, skill_name)
-                  skill_md = os.path.join(skill_path, "SKILL.md")
-                  if os.path.isdir(skill_path) and os.path.isfile(skill_md):
-                      metadata = extract_frontmatter(skill_md)
-                      if metadata:
-                          print(f"Found: {metadata.get('name')}")
-                          skills.append(metadata)
           
-          print(f"Total skills found: {len(skills)}")
+          # Find all .skill files
+          skill_files = glob.glob('**/*.skill', recursive=True)
+          print(f"Found {len(skill_files)} .skill files")
           
+          for skill_file in sorted(skill_files):
+              print(f"\nProcessing: {skill_file}")
+              try:
+                  # .skill files are zip archives
+                  with zipfile.ZipFile(skill_file, 'r') as zip_ref:
+                      # Find SKILL.md inside
+                      for file_info in zip_ref.filelist:
+                          if file_info.filename.endswith('SKILL.md'):
+                              content = zip_ref.read(file_info.filename).decode('utf-8')
+                              
+                              # Extract frontmatter
+                              match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+                              if match:
+                                  try:
+                                      data = yaml.safe_load(match.group(1))
+                                      skills.append(data)
+                                      print(f"  ✓ Found skill: {data.get('name')}")
+                                  except Exception as e:
+                                      print(f"  ✗ YAML error: {e}")
+                              break
+              except Exception as e:
+                  print(f"  ✗ Error reading {skill_file}: {e}")
+          
+          # Generate README
           readme = """# Claude Skills Repository
           
           A collection of custom Claude skills for productivity, content creation, faith documentation, and technical education.
@@ -70,31 +67,33 @@ jobs:
           
           """
           
-          for i, skill in enumerate(skills, 1):
-              name = skill.get('name', 'Unknown')
-              desc = skill.get('description', 'No description')
-              readme += f"### {i}. **{name}**\n{desc}\n\n---\n\n"
+          if skills:
+              for i, skill in enumerate(skills, 1):
+                  name = skill.get('name', 'Unknown')
+                  desc = skill.get('description', 'No description')
+                  readme += f"### {i}. **{name}**\n\n{desc}\n\n---\n\n"
+          else:
+              readme += "No skills found.\n\n"
           
           readme += """## 🚀 How to Use
           
-          1. Download `.skill` file
-          2. Install in Claude.ai
-          3. Use trigger phrases
+          1. Download a `.skill` file
+          2. Install in Claude.ai settings
+          3. Use the trigger phrases
           
           ---
           
-          **Built with:** Claude AI  
-          **Maintained by:** Jon Taylor (JonnyTech)
+          Built with Claude AI | Maintained by Jon Taylor
           """
           
-          with open(README_FILE, 'w') as f:
+          with open('README.md', 'w') as f:
               f.write(readme)
           
-          print(f"✅ README updated with {len(skills)} skills")
-          ENDPYTHON
+          print(f"\n✅ README updated with {len(skills)} skills!")
+          EOF
       
       - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add README.md
-          git diff --cached --quiet || (git commit -m "docs: auto-generate README from skills" && git push)
+          git diff --cached --quiet || (git commit -m "docs: auto-update README" && git push)
