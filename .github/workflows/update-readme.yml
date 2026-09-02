@@ -33,6 +33,7 @@ jobs:
         run: pip install pyyaml
       
       - name: Generate README
+        working-directory: ${{ github.workspace }}
         run: |
           python3 << 'ENDPYTHON'
           import os
