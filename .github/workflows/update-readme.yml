@@ -3,6 +3,9 @@
 
 name: Update README from Skills
 
+permissions:
+  contents: write
+  
 on:
   push:
     branches:
