@@ -1,7 +1,5 @@
 # Claude Skills Repository
 
-## NOT ALL SKILLS ARE DESCRIBED, PLEASE CHECK THE SKILLS FOLDER
-
 A collection of custom Claude skills for productivity, content creation, faith documentation, and technical education.
 
 ## 📚 Skills Directory
