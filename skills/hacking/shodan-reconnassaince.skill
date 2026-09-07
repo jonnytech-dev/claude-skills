@@ -1,0 +1,221 @@
+---
+name: shodan-reconnaissance
+description: >
+  Analyze Shodan host reconnaissance data for one or more IPs/domains.
+  Extract and organize: open ports, services, SSL certificates, HTTP headers,
+  organization info, hostnames, and security details. Export to professional XLSX.
+  Trigger when user provides Shodan URLs, Shodan host data, or asks to "analyze Shodan",
+  "shodan reconnaissance", "port scanning", or shares shodan.io links.
+---
+
+# Shodan Reconnaissance Skill
+
+## Purpose
+
+Extract and analyze **Shodan host reconnaissance data** provided by the user. Normalize service fingerprints, SSL certificate info, security headers, and hosting details into a clean, professional Excel workbook for infrastructure assessment.
+
+This skill does **not** perform WHOIS lookups or domain registration research—it focuses purely on **active host reconnaissance** from Shodan.
+
+## Trigger Examples
+
+This skill activates for requests such as:
+
+- `Analyze this Shodan data: [paste Shodan output]`
+- `Here's a Shodan host link: https://www.shodan.io/host/1.2.3.4`
+- `Run Shodan reconnaissance on these IPs`
+- `Extract Shodan data from: [Shodan host pages]`
+- `What services are running on [IP] (from Shodan)`
+- `Analyze Shodan results for southern.edu`
+
+## Inputs
+
+Accept:
+- Shodan host URLs (https://www.shodan.io/host/IP)
+- Raw Shodan JSON/text output
+- Multiple IPs from Shodan search results
+- Pasted Shodan host page data
+
+## Required Data Fields
+
+For every IP/host discovered via Shodan, collect:
+
+1. **IP Address**
+2. **Hostname(s) / FQDN(s)**
+3. **Organization** (from Shodan reverse DNS/ASN)
+4. **City / Country**
+5. **Open Ports** (discovered by Shodan scan)
+6. **Services** (software/version fingerprints)
+7. **Server Software** (Apache, nginx, IIS, etc. with version)
+8. **SSL Certificate Info**
+   - Issuer
+   - Common Name (CN)
+   - Alternative Names (SANs)
+   - Valid From / Valid To
+   - Supported TLS Versions
+9. **HTTP Headers** (security-relevant headers)
+10. **Tags** (Shodan tags: eol-product, outdated, etc.)
+11. **Last Scan Date** (from Shodan metadata)
+12. **HTTP Status** (response code if applicable)
+13. **Notes** (vulnerabilities, concerns, observations)
+
+## Data Normalization
+
+### IP Addresses
+- Deduplicated
+- Sorted in order
+
+### Hostnames
+- Line-break separated within cell
+- Lowercase normalized
+- Duplicates removed per IP
+
+### Ports
+- Comma-separated list
+- Numeric order (80, 443, 22, 3306, etc.)
+- Include common service name if known (HTTP, HTTPS, SSH, MySQL)
+
+### Server Software
+- Format: `SoftwareName/Version` (e.g., `Apache/2.4.41`)
+- Include patch level when available
+- Flag if version is known to be outdated or EOL
+
+### SSL Certificates
+- Issuer: CA name (e.g., "Let's Encrypt", "DigiCert", "self-signed")
+- CN: extracted from certificate common name
+- SANs: list additional domains if present
+- Validity: date range (from…to)
+- TLS: comma-separated versions (TLSv1.2, TLSv1.3)
+
+### Security Headers
+- Extract header name and value
+- Highlight missing security headers:
+  - Missing: X-Frame-Options
+  - Missing: X-Content-Type-Options
+  - Missing: Strict-Transport-Security
+  - Missing: Content-Security-Policy
+
+### Tags
+- Preserve Shodan tags as-is (e.g., "eol-product", "outdated")
+- Add custom flags:
+  - `⚠️ OUTDATED_SOFTWARE` - if version is 2+ releases behind current
+  - `⚠️ EOL_PRODUCT` - if software is end-of-life
+  - `🔒 SECURE_TLS` - if TLS 1.2+ only
+  - `⚠️ INSECURE_TLS` - if TLS 1.0 or 1.1
+  - `🔓 SELF_SIGNED_SSL` - if certificate is self-signed
+
+### Last Scan Date
+- ISO format: YYYY-MM-DDTHH:MM:SSZ
+- Calculate days since last scan
+
+## XLSX Output
+
+Create a professional workbook named:
+
+```text
+shodan_reconnaissance_YYYY-MM-DD.xlsx
+```
+
+### Sheet 1: `Shodan Hosts`
+
+One row per unique IP.
+
+**Columns:**
+
+| Column | Notes |
+|--------|-------|
+| IP Address | Sorted, deduplicated |
+| Hostname(s) | Line-break separated |
+| Organization | From Shodan reverse DNS/ASN |
+| City | Geolocation from Shodan |
+| Country | Geolocation from Shodan |
+| Open Ports | Comma-separated, numeric order |
+| Services | Software/version fingerprints |
+| Server Software | e.g., Apache/2.4.41 |
+| SSL Issuer | CA name or "self-signed" |
+| SSL CN | Certificate common name |
+| SSL SANs | Alternative names |
+| SSL Validity | "From - To" date range |
+| TLS Versions | Comma-separated (TLSv1.2, TLSv1.3) |
+| Last Scan | ISO date |
+| Days Since Scan | Calculated |
+| HTTP Status | Response code if applicable |
+| Security Headers | Line-break separated |
+| Tags | Shodan tags + custom flags |
+| Notes | Observations, concerns |
+
+**Formatting:**
+
+- Bold professional header row
+- Freeze header row
+- Enable AutoFilter
+- Alternate row colors
+- Wrapped text for multi-line cells
+- Sensible column widths
+- Top-aligned rows
+
+**Conditional Formatting:**
+
+- `⚠️ OUTDATED_SOFTWARE` → Yellow/orange background
+- `⚠️ EOL_PRODUCT` → Red background
+- `🔓 SELF_SIGNED_SSL` → Red background
+- `🔒 SECURE_TLS` → Green background
+
+### Sheet 2: `Port Summary`
+
+Aggregated view of discovered ports across all IPs.
+
+**Columns:**
+
+| Port | Service | Frequency | IPs Using | Common Software |
+|------|---------|-----------|-----------|-----------------|
+
+### Sheet 3: `Security Analysis`
+
+Summary and concerns.
+
+**Contents:**
+
+- Total IPs scanned
+- Total hostnames identified
+- Unique organizations
+- Unique locations
+- Total unique ports discovered
+- Software inventory (all versions)
+- Security observations
+
+### Sheet 4: `Raw Evidence`
+
+Preserve original Shodan data for verification.
+
+**Columns:**
+
+| IP | Source | Raw Data / Relevant Output |
+
+## Final Response
+
+When finished, provide summary such as:
+
+```text
+Analyzed 4 IPs from Shodan reconnaissance.
+
+Summary:
+- 11 hostnames identified
+- 2 locations (Collegedale, Baltimore)
+- Ports: 80, 443 (HTTP/HTTPS)
+- 2 web servers (Apache, nginx)
+- ⚠️ Alert: nginx 1.22.1 is outdated (2 versions behind)
+- Secure TLS: 1.2, 1.3
+
+[Download Shodan Reconnaissance workbook](...)
+```
+
+## Important Rules
+
+- Only analyze Shodan data the user provides or publicly shares
+- Do not perform active scans or port scanning yourself
+- Do not access Shodan API without explicit key from user
+- Use only passive reconnaissance data
+- Never fabricate missing data
+- Flag outdated software with specific version info
+- Preserve raw evidence for verification
+- Always produce the requested `.xlsx` file
