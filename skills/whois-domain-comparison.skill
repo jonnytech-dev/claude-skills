@@ -1,0 +1,599 @@
+---
+name: whois-domain-comparison
+description: >
+  Run WHOIS/RDAP research for one or more user-supplied domains, compare registrar,
+  registrant, name servers, creation date, expiry date, and WHOIS privacy status,
+  then export the normalized results to a clean professional XLSX workbook.
+  Trigger when the user asks to "run whois", "compare domain whois", "research domains with whois",
+  "check domain registration details", or similar requests involving one or more domains.
+---
+
+# WHOIS Domain Comparison Skill
+
+## Purpose
+
+Use this skill to investigate **any number of domains supplied by the user**, retrieve publicly available registration data, normalize inconsistent WHOIS/RDAP responses, compare the domains, and export the results into a polished `.xlsx` workbook.
+
+The skill must never fabricate missing registration information. If a field is unavailable, redacted, privacy-protected, or not returned by the registry/registrar, record that explicitly.
+
+## Trigger Examples
+
+This skill should activate for requests such as:
+
+- `Run whois on example.com and example.org`
+- `Compare these domains using WHOIS: domain1.com, domain2.net, domain3.io`
+- `Research [domains] using whois`
+- `Check registrar, registrant, nameservers, creation and expiry dates for these domains`
+- `Make me an XLSX WHOIS comparison for these domains`
+
+## Inputs
+
+Accept one or more domains.
+
+The user may provide domains:
+
+- separated by commas
+- separated by spaces
+- one per line
+- as full URLs such as `https://example.com/path`
+- with or without `www.`
+
+Normalize each input to its registrable hostname before lookup.
+
+Example:
+
+```text
+https://www.example.com/login
+example.org
+subdomain.example.net
+```
+
+Normalize to:
+
+```text
+example.com
+example.org
+example.net
+```
+
+If registrable-domain extraction cannot be determined reliably, use the supplied hostname and note that in the output.
+
+## Required Data Fields
+
+For every domain, collect and normalize the following:
+
+1. **Domain**
+2. **Registrar**
+3. **Registrant / Organization**
+4. **Registrant Country**
+5. **Name Servers**
+6. **Creation Date**
+7. **Expiry Date**
+8. **Last Updated Date**
+9. **WHOIS Privacy Status**
+10. **Domain Status**
+11. **Registry / RDAP Source**
+12. **Lookup Method**
+13. **Lookup Timestamp**
+14. **Notes**
+
+### WHOIS Privacy Status
+
+Normalize privacy status to one of:
+
+- `Private / Redacted`
+- `Public`
+- `Unknown`
+
+Mark `Private / Redacted` when the registrant fields contain indicators such as:
+
+- REDACTED FOR PRIVACY
+- DATA REDACTED
+- Privacy service
+- WhoisGuard
+- Domains By Proxy
+- Contact Privacy
+- Identity Protect
+- PrivacyGuardian
+- Registration Private
+- GDPR redaction
+- similar privacy/proxy wording
+
+Do **not** assume privacy protection solely because a registrant name is missing. Missing data can also be caused by registry policy or RDAP limitations. In that situation use `Unknown` unless there is explicit evidence of redaction/privacy.
+
+## Lookup Strategy
+
+Use publicly accessible sources only.
+
+Preferred order:
+
+1. **RDAP**
+2. **Local `whois` CLI**
+3. If neither returns usable data, record the lookup as unsuccessful.
+
+### RDAP
+
+Prefer RDAP because the response is structured and easier to normalize.
+
+Possible lookup approach:
+
+```text
+https://rdap.org/domain/{domain}
+```
+
+or an authoritative registry RDAP endpoint discovered through the IANA RDAP bootstrap data.
+
+Extract, when present:
+
+- registrar entity
+- registrant entity
+- registrant country
+- nameservers
+- registration event
+- expiration event
+- last changed event
+- status values
+- source / port43 / links
+
+### WHOIS CLI Fallback
+
+If RDAP is unavailable or incomplete, run:
+
+```bash
+whois example.com
+```
+
+Never pass unsanitized shell input directly.
+
+Validate the domain before executing WHOIS.
+
+Suggested validation:
+
+```regex
+^(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$
+```
+
+The parser should account for field variations including:
+
+```text
+Registrar:
+Sponsoring Registrar:
+registrar:
+Registrant Name:
+Registrant Organization:
+Registrant:
+Registrant Country:
+Name Server:
+Name Servers:
+Creation Date:
+Created On:
+Created:
+Registered On:
+Registry Expiry Date:
+Expiration Date:
+Expiry Date:
+Expires On:
+Updated Date:
+Last Updated On:
+Domain Status:
+Status:
+```
+
+## Data Normalization Rules
+
+### Registrar
+
+Normalize whitespace and capitalization, but preserve the registrar's actual legal/display name.
+
+Do not merge different registrar names unless they are clearly equivalent variants of the same returned value.
+
+### Registrant
+
+Prefer organization when an individual name is redacted or unavailable.
+
+Examples:
+
+```text
+Registrant Name: REDACTED FOR PRIVACY
+Registrant Organization: Example Corporation
+```
+
+Output:
+
+```text
+Registrant / Organization = Example Corporation
+Privacy Status = Private / Redacted
+```
+
+If both are private/redacted:
+
+```text
+Registrant / Organization = Redacted
+```
+
+### Name Servers
+
+- convert to lowercase
+- strip trailing periods
+- remove duplicates
+- sort alphabetically
+- join using line breaks inside the XLSX cell
+
+Example:
+
+```text
+ns1.example.net
+ns2.example.net
+```
+
+### Dates
+
+Convert valid dates to an Excel-compatible datetime.
+
+Preferred display:
+
+```text
+YYYY-MM-DD
+```
+
+If the source includes time, preserve the full timestamp internally when possible, but display the date cleanly in the workbook.
+
+If a date cannot be parsed, keep the original returned string and add a note.
+
+### Domain Status
+
+Remove duplicate status entries.
+
+If status values include ICANN/EPP URLs, preserve only the readable status code when possible.
+
+Example:
+
+```text
+clientTransferProhibited
+serverDeleteProhibited
+```
+
+## Comparison Logic
+
+After collecting all domains, calculate useful comparison fields.
+
+Include:
+
+- whether multiple domains use the same registrar
+- whether multiple domains share any nameservers
+- whether registrant organizations match
+- age of each domain in years
+- days until expiry
+- whether the domain expires within:
+  - 30 days
+  - 60 days
+  - 90 days
+  - 1 year
+
+Do not infer common ownership merely because registrar or nameservers match.
+
+A shared registrar or DNS provider is **not proof** that domains have the same owner.
+
+## XLSX Output
+
+Create a professional workbook named similar to:
+
+```text
+whois_domain_comparison_YYYY-MM-DD.xlsx
+```
+
+Use Python with `openpyxl`.
+
+The workbook should contain at least these worksheets:
+
+### 1. `WHOIS Comparison`
+
+One row per domain.
+
+Recommended columns:
+
+| Column |
+|---|
+| Domain |
+| Registrar |
+| Registrant / Organization |
+| Registrant Country |
+| WHOIS Privacy |
+| Creation Date |
+| Expiry Date |
+| Domain Age (Years) |
+| Days Until Expiry |
+| Last Updated |
+| Name Servers |
+| Domain Status |
+| Lookup Method |
+| Source |
+| Lookup Timestamp |
+| Notes |
+
+Formatting requirements:
+
+- bold professional header row
+- freeze the header row
+- enable AutoFilter
+- use an Excel Table over the complete dataset
+- alternate-row table styling
+- wrapped text for nameservers/status/notes
+- sensible column widths
+- top-aligned rows
+- real Excel date cells where parsing succeeds
+- date format `yyyy-mm-dd`
+- no unnecessary merged cells in the data table
+
+Conditional formatting:
+
+- expiry <= 30 days: strong warning
+- expiry <= 90 days: warning
+- privacy/redaction: subtle visual indicator
+- failed lookup: warning indicator
+
+### 2. `Comparison Summary`
+
+Provide a clean overview containing:
+
+- total domains
+- successful lookups
+- failed lookups
+- private/redacted domains
+- public registrant domains
+- domains expiring within 30 days
+- domains expiring within 90 days
+- unique registrars
+- domains grouped by registrar
+- shared nameserver observations
+
+Include a comparison table such as:
+
+| Registrar | Domains Using Registrar | Count |
+|---|---|---|
+
+and:
+
+| Name Server | Domains Using Name Server | Count |
+|---|---|---|
+
+Only include shared nameservers in the nameserver comparison table when used by 2 or more supplied domains.
+
+### 3. `Raw Evidence`
+
+Preserve the underlying evidence used for every result.
+
+Recommended columns:
+
+| Domain | Lookup Method | Source | Raw / Relevant Response |
+
+This allows the user to verify the normalized findings.
+
+Do not place secrets, authentication tokens, or unrelated environmental information in this sheet.
+
+## Suggested Python Implementation
+
+Use a structure similar to:
+
+```python
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Optional
+
+@dataclass
+class WhoisRecord:
+    domain: str
+    registrar: Optional[str] = None
+    registrant: Optional[str] = None
+    registrant_country: Optional[str] = None
+    privacy_status: str = "Unknown"
+    creation_date: Optional[datetime] = None
+    expiry_date: Optional[datetime] = None
+    updated_date: Optional[datetime] = None
+    nameservers: list[str] = field(default_factory=list)
+    statuses: list[str] = field(default_factory=list)
+    lookup_method: str = ""
+    source: str = ""
+    lookup_timestamp: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    notes: list[str] = field(default_factory=list)
+    raw_evidence: str = ""
+```
+
+### RDAP Fetch
+
+Example implementation pattern:
+
+```python
+import requests
+
+def fetch_rdap(domain: str) -> dict:
+    url = f"https://rdap.org/domain/{domain}"
+    response = requests.get(
+        url,
+        timeout=20,
+        headers={"User-Agent": "WHOIS-Domain-Comparison/1.0"}
+    )
+    response.raise_for_status()
+    return response.json()
+```
+
+Handle:
+
+- HTTP 404
+- 429 rate limiting
+- 5xx server errors
+- malformed JSON
+- timeout
+- unsupported TLDs
+
+Do not silently swallow lookup failures. Add the reason to `Notes`.
+
+### WHOIS CLI
+
+Example:
+
+```python
+import subprocess
+
+def fetch_whois_cli(domain: str) -> str:
+    result = subprocess.run(
+        ["whois", domain],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+    output = (result.stdout or "") + "\n" + (result.stderr or "")
+
+    if result.returncode != 0 and not output.strip():
+        raise RuntimeError(f"whois exited with code {result.returncode}")
+
+    return output.strip()
+```
+
+Always use argument arrays as shown above instead of:
+
+```python
+subprocess.run(f"whois {domain}", shell=True)
+```
+
+### Privacy Detection
+
+Example:
+
+```python
+PRIVACY_MARKERS = [
+    "redacted for privacy",
+    "data redacted",
+    "whoisguard",
+    "domains by proxy",
+    "contact privacy",
+    "identity protect",
+    "privacyguardian",
+    "registration private",
+    "privacy service",
+    "gdpr",
+]
+
+def detect_privacy(*values: str | None) -> str:
+    combined = " ".join(v for v in values if v).lower()
+
+    if any(marker in combined for marker in PRIVACY_MARKERS):
+        return "Private / Redacted"
+
+    if combined.strip():
+        return "Public"
+
+    return "Unknown"
+```
+
+### Expiry Calculation
+
+```python
+from datetime import datetime, timezone
+
+def days_until_expiry(expiry):
+    if not expiry:
+        return None
+
+    now = datetime.now(timezone.utc)
+
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+
+    return (expiry - now).days
+```
+
+### XLSX Workbook
+
+Use `openpyxl`.
+
+Example:
+
+```python
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.worksheet.table import Table, TableStyleInfo
+
+wb = Workbook()
+ws = wb.active
+ws.title = "WHOIS Comparison"
+
+headers = [
+    "Domain",
+    "Registrar",
+    "Registrant / Organization",
+    "Registrant Country",
+    "WHOIS Privacy",
+    "Creation Date",
+    "Expiry Date",
+    "Domain Age (Years)",
+    "Days Until Expiry",
+    "Last Updated",
+    "Name Servers",
+    "Domain Status",
+    "Lookup Method",
+    "Source",
+    "Lookup Timestamp",
+    "Notes",
+]
+
+ws.append(headers)
+
+for cell in ws[1]:
+    cell.font = Font(bold=True)
+
+ws.freeze_panes = "A2"
+ws.auto_filter.ref = ws.dimensions
+```
+
+After all rows are written, create a proper Excel Table and style it.
+
+## Quality Checks Before Saving
+
+Before producing the final workbook:
+
+1. Verify every input domain appears exactly once in the main comparison sheet.
+2. Verify no field was invented.
+3. Verify missing values are represented as:
+   - `Not returned`
+   - `Redacted`
+   - `Unknown`
+   - or a similarly explicit value.
+4. Verify parsed dates match the evidence.
+5. Verify nameservers are deduplicated.
+6. Verify privacy status is evidence-based.
+7. Verify raw evidence is preserved.
+8. Verify the workbook opens successfully using `openpyxl.load_workbook()`.
+9. Verify filters, frozen panes, and table range cover all populated rows.
+10. Verify the output file actually exists before linking it to the user.
+
+## Final Response
+
+When finished, provide a concise summary such as:
+
+```text
+Completed WHOIS comparison for 8 domains.
+
+The workbook includes normalized registration data, registrar/registrant comparisons,
+DNS/name-server overlap, privacy status, expiry analysis, and raw lookup evidence.
+
+[Download the WHOIS comparison workbook](...)
+```
+
+If any lookup failed, explicitly state how many failed and preserve the error details in the workbook.
+
+## Important Rules
+
+- Only investigate domains the user supplied.
+- Only use publicly accessible WHOIS/RDAP information.
+- Do not attempt authentication bypasses or access-control circumvention.
+- Do not make ownership claims beyond what the public registration data supports.
+- Do not fabricate registrant details when privacy protection/redaction is present.
+- Treat matching registrar, DNS provider, IP infrastructure, or nameservers as a correlation only, not proof of common ownership.
+- Respect reasonable lookup rate limits.
+- Prefer structured RDAP data over brittle text parsing where available.
+- Always produce the requested `.xlsx` file when the environment supports file generation.

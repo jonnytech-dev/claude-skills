@@ -1,0 +1,1364 @@
+---
+name: google-dork-domain-research
+description: >
+  Perform thorough passive OSINT research on a public domain using Google-style
+  search operators and other public search-engine queries. Trigger when the user
+  says things such as "research [domain] using google dorks", "google dork
+  [domain]", "passive recon [domain]", "find public files on [domain]", or asks
+  for publicly indexed PDFs, documents, login pages, portals, subdomains,
+  directory listings, or other search-engine-indexed resources belonging to a
+  domain. Verify findings before reporting them, never fabricate results, and
+  export the complete research results as a professionally formatted downloadable XLSX workbook.
+---
+
+# Google Dork Domain Research
+
+## Purpose
+
+Conduct a thorough, passive, evidence-based investigation of a user-supplied
+domain using search engines and publicly accessible web pages.
+
+Example invocation:
+
+> research example.edu using google dorks
+
+The goal is to identify publicly indexed resources while maintaining a strict
+separation between:
+
+1. A search query that was performed.
+2. A search result that appears to exist.
+3. A resource that was independently opened and verified.
+4. A query that returned no meaningful results.
+
+Never treat these four states as equivalent.
+
+The primary deliverable is a professionally formatted XLSX workbook containing the research findings, summary, and complete query log.
+
+# Core Rules
+
+## Evidence First
+
+NEVER fabricate:
+
+- URLs
+- subdomains
+- filenames
+- PDF names
+- login pages
+- portals
+- directory listings
+- document titles
+- server technologies
+- usernames
+- passwords
+- query results
+- HTTP status codes
+- page contents
+
+If something cannot be independently confirmed, label it:
+
+`UNVERIFIED`
+
+If a query returns nothing useful, report:
+
+`NO VERIFIED RESULT`
+
+Do not invent an example result to make the report look complete.
+
+Accuracy is more important than row count.
+
+## Passive Research Only
+
+This skill performs PUBLIC, PASSIVE reconnaissance.
+
+Allowed activities include:
+
+- Search-engine queries
+- Opening publicly accessible pages
+- Inspecting publicly indexed documents
+- Identifying publicly accessible login pages
+- Identifying public portals
+- Identifying directory-index pages already exposed publicly
+- Identifying public subdomains found through search results
+- Reading publicly exposed metadata
+- Looking at robots.txt
+- Looking at sitemap.xml
+- Reading public documentation
+- Following ordinary public links
+
+Do NOT:
+
+- Attempt authentication
+- Submit credentials
+- Test leaked/default credentials
+- Brute force accounts
+- Bypass authentication
+- Exploit vulnerabilities
+- Perform SQL injection
+- Perform command injection
+- Attempt directory traversal
+- Enumerate private files through exploitation
+- Perform credential stuffing
+- Evade access controls
+- Scan ports
+- Run vulnerability scanners against the target
+- Send exploit payloads
+- Attempt privilege escalation
+- Access non-public information
+
+A public login page may be documented.
+
+Credentials displayed on a public page may be noted as a defensive observation,
+but MUST NOT be tested.
+
+# Research Procedure
+
+When invoked with:
+
+`research [DOMAIN] using google dorks`
+
+extract and normalize the target.
+
+Example:
+
+Input:
+
+`research https://www.example.edu/ using google dorks`
+
+Normalize to:
+
+`example.edu`
+
+Record:
+
+- Target domain
+- Research date
+- Research type: Passive OSINT
+- Authentication attempts: None
+- Intrusive testing: None
+
+# Phase 1 — General Domain Discovery
+
+Begin with broad searches.
+
+```text
+site:DOMAIN
+site:www.DOMAIN
+```
+
+Search for notable indexed pages and domain structure.
+
+Also investigate discovered legitimate subdomains through public search results.
+
+Do not assume a subdomain exists merely because its name is common.
+
+# Phase 2 — Public Documents
+
+Search systematically for common document formats.
+
+## PDF
+
+```text
+site:DOMAIN filetype:pdf
+```
+
+## Microsoft Word
+
+```text
+site:DOMAIN filetype:doc
+site:DOMAIN filetype:docx
+```
+
+## Excel / CSV
+
+```text
+site:DOMAIN filetype:xls
+site:DOMAIN filetype:xlsx
+site:DOMAIN filetype:csv
+```
+
+## PowerPoint
+
+```text
+site:DOMAIN filetype:ppt
+site:DOMAIN filetype:pptx
+```
+
+## Plain Text / Structured Documents
+
+```text
+site:DOMAIN filetype:txt
+site:DOMAIN filetype:rtf
+site:DOMAIN filetype:xml
+site:DOMAIN filetype:json
+```
+
+Do not claim that a file is publicly available solely because its filename
+appears in a snippet.
+
+Open it when practical and verify that the resource is actually public.
+
+# Phase 3 — Targeted Document Searches
+
+Look for useful publicly published organizational documents.
+
+```text
+site:DOMAIN filetype:pdf "handbook"
+site:DOMAIN filetype:pdf "manual"
+site:DOMAIN filetype:pdf "guide"
+site:DOMAIN filetype:pdf "policy"
+site:DOMAIN filetype:pdf "procedure"
+site:DOMAIN filetype:pdf "report"
+site:DOMAIN filetype:pdf "catalog"
+site:DOMAIN filetype:pdf "newsletter"
+site:DOMAIN filetype:pdf "annual report"
+site:DOMAIN filetype:pdf "strategic plan"
+site:DOMAIN filetype:pdf "technology"
+site:DOMAIN filetype:pdf "information technology"
+site:DOMAIN filetype:pdf "IT"
+site:DOMAIN filetype:pdf "network"
+site:DOMAIN filetype:pdf "security"
+site:DOMAIN filetype:pdf "acceptable use"
+site:DOMAIN filetype:pdf "student handbook"
+site:DOMAIN filetype:pdf "employee handbook"
+```
+
+Adjust terminology intelligently to the type of organization.
+
+For a university, additionally investigate:
+
+```text
+site:DOMAIN filetype:pdf "academic catalog"
+site:DOMAIN filetype:pdf "course catalog"
+site:DOMAIN filetype:pdf "faculty handbook"
+site:DOMAIN filetype:pdf "student handbook"
+site:DOMAIN filetype:pdf "campus"
+site:DOMAIN filetype:pdf "registrar"
+site:DOMAIN filetype:pdf "syllabus"
+```
+
+# Phase 4 — Login and Authentication Surfaces
+
+Identify PUBLIC login-related pages without attempting to authenticate.
+
+```text
+site:DOMAIN inurl:login
+site:DOMAIN inurl:signin
+site:DOMAIN inurl:sign-in
+site:DOMAIN inurl:auth
+site:DOMAIN inurl:sso
+site:DOMAIN inurl:account
+site:DOMAIN inurl:portal
+
+site:DOMAIN intitle:"login"
+site:DOMAIN intitle:"sign in"
+
+site:DOMAIN "Log in"
+site:DOMAIN "Login"
+site:DOMAIN "Sign in"
+site:DOMAIN "Forgot password"
+site:DOMAIN "Username" "Password"
+```
+
+For each verified login surface record:
+
+- Page title
+- Hostname
+- URL
+- Apparent purpose
+- Authentication provider if clearly visible
+- Whether it appears organization-facing or public-facing
+- Verification status
+
+Do not test the form.
+
+# Phase 5 — Public Portals
+
+Search for organizational portals.
+
+```text
+site:DOMAIN inurl:portal
+site:DOMAIN intitle:"portal"
+site:DOMAIN "student portal"
+site:DOMAIN "employee portal"
+site:DOMAIN "faculty portal"
+site:DOMAIN "parent portal"
+site:DOMAIN "applicant portal"
+site:DOMAIN "customer portal"
+```
+
+Only report portals actually discovered.
+
+# Phase 6 — Directory Listings
+
+Look specifically for publicly indexed web directory listings.
+
+```text
+site:DOMAIN intitle:"index of"
+site:DOMAIN intitle:"index of /"
+site:DOMAIN "Index of /"
+site:DOMAIN "Parent Directory"
+site:DOMAIN intitle:"index of" "Parent Directory"
+site:DOMAIN intitle:"index of" "Last modified"
+site:DOMAIN intitle:"index of" "Name" "Size"
+```
+
+Also repeat these queries against VERIFIED subdomains when useful:
+
+```text
+site:SUBDOMAIN.DOMAIN intitle:"index of"
+```
+
+A search snippet alone is not enough to classify an exposed directory as
+verified.
+
+Prefer opening the page.
+
+Record:
+
+- URL
+- Hostname
+- Directory path
+- Visible file types
+- Whether parent-directory navigation exists
+- Verification status
+
+Do not attempt path traversal or manually guess private parent directories.
+
+# Phase 7 — Publicly Indexed Application Areas
+
+Search for common application-related URL structures.
+
+```text
+site:DOMAIN inurl:app
+site:DOMAIN inurl:apps
+site:DOMAIN inurl:dashboard
+site:DOMAIN inurl:account
+site:DOMAIN inurl:admin
+site:DOMAIN inurl:console
+site:DOMAIN inurl:manage
+site:DOMAIN inurl:management
+```
+
+IMPORTANT:
+
+An `/admin` URL is not automatically a vulnerability.
+
+Simply document verified publicly reachable interfaces.
+
+Do not try to access restricted functionality.
+
+# Phase 8 — Public Documentation
+
+```text
+site:DOMAIN inurl:docs
+site:DOMAIN inurl:documentation
+site:DOMAIN inurl:help
+site:DOMAIN inurl:support
+
+site:DOMAIN "documentation"
+site:DOMAIN "user guide"
+site:DOMAIN "administrator guide"
+site:DOMAIN "setup guide"
+```
+
+Record documentation that reveals useful information about publicly documented
+systems, services, or organizational structure.
+
+Do not exaggerate the security significance.
+
+# Phase 9 — Public Subdomain Discovery
+
+Use passive search-engine results to identify subdomains.
+
+Queries may include:
+
+```text
+site:*.DOMAIN
+-site:www.DOMAIN site:DOMAIN
+```
+
+Also record hosts naturally discovered while searching.
+
+Build a verified subdomain inventory.
+
+Do not generate speculative entries such as:
+
+- vpn.DOMAIN
+- mail.DOMAIN
+- admin.DOMAIN
+- dev.DOMAIN
+
+unless they actually appear in public evidence.
+
+# Phase 10 — Public Files by URL Keywords
+
+Search for common storage locations.
+
+```text
+site:DOMAIN inurl:uploads
+site:DOMAIN inurl:upload
+site:DOMAIN inurl:files
+site:DOMAIN inurl:documents
+site:DOMAIN inurl:docs
+site:DOMAIN inurl:media
+site:DOMAIN inurl:assets
+site:DOMAIN inurl:downloads
+site:DOMAIN inurl:archive
+```
+
+Combine these with file types when useful.
+
+Example:
+
+```text
+site:DOMAIN inurl:uploads filetype:pdf
+site:DOMAIN inurl:media filetype:pdf
+site:DOMAIN inurl:docs filetype:pdf
+```
+
+# Phase 11 — Archive / Historical Material
+
+Search for intentionally public archived information.
+
+```text
+site:DOMAIN inurl:archive
+site:DOMAIN inurl:archives
+site:DOMAIN "archive"
+site:DOMAIN "archives"
+site:DOMAIN filetype:pdf "archive"
+```
+
+Historical material can reveal old documentation, but do not assume outdated
+information reflects the current environment.
+
+Mark older findings as:
+
+`HISTORICAL`
+
+when appropriate.
+
+# Phase 12 — Public Configuration / Developer Artifacts
+
+Passive search may identify publicly indexed development-related material.
+
+Use conservative searches such as:
+
+```text
+site:DOMAIN filetype:xml
+site:DOMAIN filetype:json
+site:DOMAIN inurl:api
+site:DOMAIN inurl:developer
+site:DOMAIN inurl:developers
+site:DOMAIN inurl:swagger
+site:DOMAIN "API documentation"
+```
+
+Treat these as informational findings.
+
+Do not make API calls requiring authentication and do not probe undocumented
+endpoints.
+
+# Phase 13 — Robots and Sitemap
+
+Check publicly available:
+
+```text
+https://DOMAIN/robots.txt
+https://DOMAIN/sitemap.xml
+```
+
+Also search:
+
+```text
+site:DOMAIN inurl:sitemap
+```
+
+Document only what is publicly exposed.
+
+A path appearing in robots.txt does NOT grant permission to access restricted
+content.
+
+# Phase 14 — Interesting Public Keywords
+
+Search for organization-specific public material with contextual keywords.
+
+Examples:
+
+```text
+site:DOMAIN "remote access"
+site:DOMAIN "VPN"
+site:DOMAIN "Wi-Fi"
+site:DOMAIN "wireless"
+site:DOMAIN "password reset"
+site:DOMAIN "account setup"
+site:DOMAIN "Microsoft 365"
+site:DOMAIN "Google Workspace"
+site:DOMAIN "single sign-on"
+site:DOMAIN "SSO"
+site:DOMAIN "help desk"
+site:DOMAIN "information technology"
+```
+
+These searches are intended to understand publicly documented infrastructure,
+not discover credentials.
+
+# Query Logging
+
+EVERY meaningful query used during research must be preserved.
+
+Never silently omit unsuccessful queries merely because they produced no
+interesting findings.
+
+Queries that produce no verified findings MUST still be exported to the CSV
+with status:
+
+`NO VERIFIED RESULT`
+
+# Finding Verification
+
+Use these statuses consistently.
+
+## VERIFIED
+
+Use only when:
+
+- The resource exists.
+- The URL was actually obtained from evidence.
+- The public page or resource can be inspected sufficiently to establish the
+  claim.
+
+## SEARCH RESULT ONLY
+
+Use when:
+
+- Search results indicate something may exist.
+- It has not been independently opened or validated.
+
+## UNVERIFIED
+
+Use when:
+
+- Evidence is incomplete.
+- Search snippets conflict.
+- The page cannot be confirmed.
+
+## NO VERIFIED RESULT
+
+Use when:
+
+- The query was performed.
+- No reliable finding was discovered.
+
+## HISTORICAL
+
+Use when information appears outdated or archival.
+
+# Handling Sensitive-Looking Public Information
+
+Sometimes public search results may expose information that appears
+security-relevant.
+
+Examples:
+
+- Internal-looking documentation
+- Public test credentials
+- Debug interfaces
+- Development documentation
+- Directory listings
+- Configuration references
+- Administrative login pages
+
+You may identify and document their existence.
+
+Do NOT:
+
+- Test credentials
+- Attempt authentication
+- Exploit the page
+- Download obviously private personal data
+- Escalate beyond passive public inspection
+
+Describe the defensive significance without claiming a vulnerability unless the
+evidence actually establishes one.
+
+# Thoroughness Requirements
+
+The research should be THOROUGH rather than stopping after the first few
+results.
+
+For large domains:
+
+1. Begin broad.
+2. Identify verified subdomains.
+3. Repeat relevant searches against important verified subdomains.
+4. Search multiple document types.
+5. Search targeted documents.
+6. Search login surfaces.
+7. Search portals.
+8. Search directory indexes.
+9. Search application areas.
+10. Search public documentation.
+11. Search storage locations.
+12. Search archives.
+13. Search developer/API documentation.
+14. Check robots.txt and sitemap.xml.
+15. Search public IT/infrastructure terminology.
+16. Verify noteworthy findings.
+17. Deduplicate resources.
+18. Preserve the complete query log.
+19. Export everything to CSV.
+
+Continue exploring different search formulations when initial searches are
+sparse.
+
+However, additional searching must remain passive and public.
+
+# Deduplication
+
+The same resource may appear under several queries.
+
+Do NOT count it multiple times.
+
+Maintain one canonical record per URL where practical.
+
+A result may still appear under multiple queries when preserving query history
+is useful, but duplicate rows must clearly indicate the canonical resource.
+
+Do not inflate finding counts because of duplicates.
+
+# URL Accuracy
+
+Copy URLs exactly from verified evidence.
+
+Never reconstruct a URL from:
+
+- page titles
+- snippets
+- assumptions
+- filenames
+- common URL conventions
+
+If the exact URL cannot be established, do not invent one.
+
+# Search Result Accuracy
+
+Do not write:
+
+"Google found X"
+
+unless the search evidence actually supports X.
+
+Prefer:
+
+"The search returned a result for X, and the resource was independently
+verified."
+
+or:
+
+"The result appeared in search, but I could not independently verify it."
+
+# XLSX Output Requirement
+
+The final research deliverable MUST be exported as a professionally formatted
+Microsoft Excel `.xlsx` workbook.
+
+Do not only display findings in chat and do not use CSV as the primary output.
+
+Create the primary output file using this naming format:
+
+```text
+google-dork-research-DOMAIN-YYYY-MM-DD.xlsx
+```
+
+Example:
+
+```text
+google-dork-research-southern.edu-2026-09-07.xlsx
+```
+
+The XLSX workbook is the PRIMARY deliverable.
+
+A Markdown/chat summary may be provided in addition to the workbook, but never
+as a replacement for it.
+
+# Workbook Structure
+
+Create exactly these primary worksheets:
+
+1. `Summary`
+2. `Research Findings`
+3. `Query Log`
+
+For large investigations, an optional fourth worksheet may be created:
+
+4. `Subdomains`
+
+Do not create unnecessary worksheets.
+
+# Primary Presentation Requirement
+
+The workbook MUST make the core research easy to read in the same compact style
+as a professional four-column reconnaissance table.
+
+The most important information should be immediately visible as:
+
+```text
+Category | Query | Verified Result | Confidence
+```
+
+Create this compact table prominently on the `Summary` worksheet under a
+section titled:
+
+```text
+Verified Research Overview
+```
+
+Use one row per meaningful research finding or research category.
+
+## Required Overview Columns
+
+### Category
+
+A concise human-readable label describing what was investigated or discovered.
+
+Examples:
+
+```text
+PDFs
+Catalog PDFs
+Reports
+Advising Docs
+Login Pages
+CIRC Login
+Catalog Login
+SSO
+MyAccess
+Directory Indexes
+Published Test Credentials
+```
+
+The category should be specific enough that the user can understand the finding
+without reading the entire row.
+
+### Query
+
+Record the exact Google dork or passive-public search query responsible for the
+finding.
+
+Examples:
+
+```text
+site:southern.edu filetype:pdf
+site:southern.edu filetype:pdf "catalog"
+site:southern.edu inurl:login
+site:southern.edu intitle:"index of"
+```
+
+Preserve the exact query text.
+
+### Verified Result
+
+Write a concise, plain-English description of what was actually established.
+
+Examples:
+
+```text
+Public PDFs are indexed. A publicly accessible university writing guide was independently verified.
+```
+
+```text
+A public login page was independently verified at edge.e.example.edu/login.
+```
+
+```text
+No publicly accessible directory listing was independently verified during this research pass.
+```
+
+When a verified resource has a URL, make the relevant URL available as a
+clickable Excel hyperlink. Do not use Markdown links inside Excel cells.
+
+Never claim more than the evidence establishes.
+
+### Confidence
+
+Use clear human-readable confidence labels:
+
+```text
+Verified
+Search Result Only
+Unverified
+Not Re-verified
+Historical
+No Verified Result
+Verified — Defensive Note
+```
+
+`Verified — Defensive Note` may be used when a real public finding deserves a
+defensive caution, such as publicly published test credentials. Such
+credentials must never be tested.
+
+## Overview Formatting
+
+The `Verified Research Overview` table MUST:
+
+- Be prominently positioned near the top of the Summary sheet.
+- Use a bold professional header row.
+- Freeze panes so headers remain visible when scrolling.
+- Enable filtering.
+- Use alternating row banding.
+- Wrap text in `Verified Result`.
+- Keep `Category` and `Confidence` compact.
+- Give `Query` enough width to read common dorks without excessive wrapping.
+- Give `Verified Result` the widest column.
+- Vertically align long rows at the top.
+- Use restrained status-based formatting for the Confidence column.
+- Keep the confidence text visible even when color formatting is applied.
+- Use clickable hyperlinks for verified evidence where appropriate.
+- Never embed raw Markdown citation syntax in spreadsheet cells.
+
+This four-column overview is the PRIMARY human-readable research view.
+
+The more detailed `Research Findings` and `Query Log` worksheets remain
+required for evidence tracking, deduplication, and auditability.
+
+# Sheet 1 — Summary
+
+Create a polished executive summary dashboard that is easy to scan.
+
+The first major table on this worksheet MUST be the four-column
+`Verified Research Overview` defined above. Summary metrics may appear above it
+in a compact report header, but detailed metrics must not push the overview far
+down the sheet.
+
+Include:
+
+- Target domain
+- Research date
+- Research type: Passive OSINT / Search-engine reconnaissance
+- Authentication attempts: None
+- Intrusive testing: None
+- Total queries performed
+- Unique verified findings
+- Verified public documents
+- Verified login/authentication pages
+- Verified portals
+- Verified directory listings
+- Verified subdomains
+- Public documentation findings
+- Historical findings
+- Unverified/search-result-only findings
+- Queries with no verified result
+
+Include a category summary table with columns:
+
+```text
+Category | Verified | Search Result Only | Unverified | Historical | No Verified Result
+```
+
+When useful, include a short `Noteworthy Observations` section containing only
+evidence-backed defensive observations.
+
+Do not inflate counts.
+
+# Sheet 2 — Research Findings
+
+Use these exact columns and this exact order:
+
+```text
+ID
+Category
+Status
+Title
+Hostname
+URL
+File Type
+Apparent Purpose
+Description
+Verification Method
+Discovery Query
+Research Date
+Notes
+```
+
+## ID
+
+Assign a simple sequential identifier:
+
+```text
+1
+2
+3
+4
+```
+
+## Category
+
+Use one of these values where applicable:
+
+```text
+PDF
+Document
+Spreadsheet
+Presentation
+Login Page
+Authentication
+Portal
+Directory Listing
+Subdomain
+Public Documentation
+Archive
+API Documentation
+Sitemap
+Robots.txt
+Public File
+Other
+```
+
+## Status
+
+Use ONLY:
+
+```text
+VERIFIED
+SEARCH RESULT ONLY
+UNVERIFIED
+HISTORICAL
+```
+
+`NO VERIFIED RESULT` belongs primarily in the Query Log because it is not a
+finding.
+
+## Title
+
+Record the actual verified title or filename.
+
+Leave blank if no title was established.
+
+## Hostname
+
+Record the exact hostname established by evidence.
+
+Never invent a hostname.
+
+## URL
+
+Record the exact URL established by evidence.
+
+If the exact URL was not established, leave this field blank.
+
+Never reconstruct URLs from:
+
+- snippets
+- filenames
+- page titles
+- assumptions
+- common URL structures
+
+## File Type
+
+Examples:
+
+```text
+PDF
+DOC
+DOCX
+XLS
+XLSX
+CSV
+PPT
+PPTX
+HTML
+TXT
+RTF
+XML
+JSON
+N/A
+```
+
+## Apparent Purpose
+
+Describe the apparent legitimate purpose of the resource.
+
+Examples:
+
+```text
+Student authentication portal
+Academic catalog
+Employee documentation
+Course materials
+Public IT documentation
+Public directory index
+```
+
+Do not claim a purpose unsupported by public evidence.
+
+## Description
+
+Provide a concise factual description of the finding.
+
+## Verification Method
+
+Examples:
+
+```text
+Opened public URL
+Search result only
+Verified through official domain page
+Public directory opened
+Official sitemap
+robots.txt
+```
+
+## Discovery Query
+
+Record the exact query that produced the finding.
+
+Do not rewrite or simplify the query afterward.
+
+## Research Date
+
+Use:
+
+```text
+YYYY-MM-DD
+```
+
+## Notes
+
+Use for:
+
+- Historical context
+- Duplicate discovery queries
+- Uncertainty
+- Defensive observations
+- Redirects
+- Authentication-provider observations
+- Other evidence-backed context
+
+Do not put unsupported speculation in Notes.
+
+# Sheet 3 — Query Log
+
+EVERY meaningful search query or direct passive-public check performed during
+research MUST be recorded here, including unsuccessful searches.
+
+Use these exact columns:
+
+```text
+Query ID
+Query
+Objective
+Outcome
+Status
+Results Found
+Verified Findings
+Notes
+```
+
+## Query Status
+
+Use ONLY:
+
+```text
+VERIFIED
+SEARCH RESULT ONLY
+UNVERIFIED
+NO VERIFIED RESULT
+HISTORICAL
+```
+
+Queries producing no reliable finding MUST remain in the workbook with:
+
+```text
+NO VERIFIED RESULT
+```
+
+Never silently omit unsuccessful queries.
+
+# Sheet 4 — Subdomains (Optional)
+
+For large domains with many verified hosts, create a separate `Subdomains`
+worksheet.
+
+Use these columns:
+
+```text
+Subdomain
+Apparent Purpose
+Discovery Query
+Evidence URL
+Verification
+Notes
+```
+
+Only include subdomains supported by actual public evidence.
+
+Never populate speculative hosts such as `vpn.DOMAIN`, `mail.DOMAIN`,
+`admin.DOMAIN`, or `dev.DOMAIN` unless they were actually discovered.
+
+# Finding and Row Rules
+
+## One Finding Per Row
+
+Each unique finding should normally be represented by one row in
+`Research Findings`.
+
+If one query discovers multiple resources, create a separate row for each
+resource.
+
+## No-Result Queries
+
+Do NOT create fake finding rows for unsuccessful searches.
+
+Instead, record the query in `Query Log` with:
+
+```text
+NO VERIFIED RESULT
+```
+
+## Duplicate Resources
+
+Deduplicate findings using the canonical verified URL where practical.
+
+If the same resource is discovered by multiple queries:
+
+- Keep one canonical row in `Research Findings`.
+- Record the primary discovery query in `Discovery Query`.
+- Record useful additional discovery queries in `Notes`.
+- Preserve every performed query separately in `Query Log`.
+
+Do not inflate finding counts because of duplicates.
+
+# Professional XLSX Formatting Requirements
+
+The workbook MUST look clean, polished, and professional.
+
+Use `openpyxl` when generating the workbook.
+
+Apply all of the following:
+
+## General
+
+- Freeze header rows.
+- Enable AutoFilter on tabular sheets.
+- Use Excel Tables for the main `Research Findings` and `Query Log` datasets
+  when practical.
+- Use readable professional fonts.
+- Use consistent alignment and spacing.
+- Use subtle borders.
+- Use alternating row styling or Excel table banding.
+- Keep the design restrained and professional.
+- Avoid excessive decoration.
+- Do not merge cells inside data tables.
+
+## Header Styling
+
+Headers should:
+
+- Be bold.
+- Have strong visual contrast.
+- Use a consistent dark or professional accent fill.
+- Use readable foreground text.
+- Be vertically centered.
+
+## Column Widths
+
+Automatically size columns to sensible readable widths.
+
+Do not make URL, description, or notes columns excessively wide.
+
+Recommended behavior:
+
+- IDs: narrow
+- Category/status/file type: medium
+- Title/hostname: medium
+- URL: wide
+- Purpose/description/notes: wide but constrained
+- Query: wide
+
+Wrap text in long-description fields.
+
+## Row Heights
+
+Allow wrapped content to remain readable.
+
+Avoid unnecessarily tall rows.
+
+## URLs
+
+Make verified URLs clickable hyperlinks.
+
+Display the complete URL or a clear hyperlink value.
+
+Never hyperlink an unverified reconstructed URL.
+
+## Status Formatting
+
+Apply restrained status-based conditional formatting or cell styling.
+
+The workbook should visually distinguish:
+
+- `VERIFIED`
+- `SEARCH RESULT ONLY`
+- `UNVERIFIED`
+- `HISTORICAL`
+- `NO VERIFIED RESULT`
+
+Do not rely on color alone; the text status must always remain visible.
+
+## Summary Sheet
+
+The Summary worksheet should be visually cleaner than the raw data sheets.
+
+Use:
+
+- A clear report title
+- Target/domain information near the top
+- A compact metrics section
+- A category summary table
+- Optional noteworthy observations beneath the metrics
+
+Do not turn it into an overly decorative dashboard.
+
+## Navigation
+
+When practical:
+
+- Freeze panes.
+- Keep worksheet names short and descriptive.
+- Put `Summary` first.
+- Put `Research Findings` second.
+- Put `Query Log` third.
+- Put `Subdomains` last if used.
+
+# Example Workbook Presentation
+
+A completed Summary overview should conceptually resemble:
+
+| Category | Query | Verified Result | Confidence |
+|---|---|---|---|
+| PDFs | `site:example.edu filetype:pdf` | Public PDF documents were indexed and at least one was independently opened and verified. | Verified |
+| Catalog PDFs | `site:example.edu filetype:pdf "catalog"` | The organization maintains a public catalog archive with accessible PDF catalogs. | Verified |
+| Login Pages | `site:example.edu inurl:login` | A functioning public login page was independently verified. | Verified |
+| Directory Indexes | `site:example.edu intitle:"index of"` | No publicly accessible directory listing was independently verified during this pass. | No Verified Result |
+
+This example defines presentation structure only. NEVER copy example findings,
+domains, URLs, or claims into an actual research workbook unless independently
+established for the real target.
+
+# Workbook Validation
+
+Before returning the workbook:
+
+1. Confirm the `.xlsx` file opens successfully.
+2. Confirm all required sheets exist.
+3. Confirm headers match the required schema.
+4. Confirm filters work.
+5. Confirm frozen panes are set.
+6. Confirm verified URLs are clickable.
+7. Confirm long text wraps correctly.
+8. Confirm no fabricated findings were inserted.
+9. Confirm all meaningful queries appear in `Query Log`.
+10. Confirm `NO VERIFIED RESULT` queries remain documented.
+11. Confirm counts on `Summary` match the actual workbook data.
+12. Confirm duplicate URLs are not incorrectly counted as separate unique findings.
+
+# Optional Machine-Friendly Export
+
+If specifically requested by the user, a CSV copy MAY also be generated from
+the `Research Findings` worksheet.
+
+The `.xlsx` workbook remains the mandatory primary output unless the user
+explicitly requests another format.
+
+# Human-Readable Summary
+
+After generating the XLSX workbook, provide a short summary in chat containing:
+
+- Target domain
+- Number of unique verified findings
+- Number of queries performed
+- Major categories represented
+- Number of verified login/portal surfaces
+- Number of verified directory listings
+- Number of verified public documents
+- Number of verified subdomains
+- Any categories where no result was independently verified
+
+Do not inflate counts.
+
+Example:
+
+```text
+Research complete for example.edu.
+
+42 search queries were performed and 31 unique public resources were independently verified.
+
+The workbook includes PDFs, public documentation, login pages, portals, verified subdomains, and the complete query log. No publicly accessible directory listings were independently verified during this pass.
+
+[Download the XLSX workbook](...)
+```
+
+# Research Integrity Rule
+
+Accuracy is more important than having an impressive report.
+
+A report containing:
+
+`No verified directory listings found`
+
+is ALWAYS preferable to inventing a directory listing.
+
+A smaller set of confirmed findings is better than a larger set containing
+speculation.
+
+# Default Trigger Behavior
+
+Trigger this skill when the user's intent matches phrases such as:
+
+- `research southern.edu using google dorks`
+- `research example.com using google dorks`
+- `google dork example.com`
+- `do passive recon on example.com`
+- `find public files for example.com`
+- `find indexed PDFs and login pages for example.com`
+- `search example.com for public documents`
+- `OSINT example.com`
+
+When invoked, immediately:
+
+1. Identify and normalize the domain.
+2. Begin the passive research workflow.
+3. Search broadly.
+4. Verify findings.
+5. Record unsuccessful queries.
+6. Deduplicate results.
+7. Export the complete research to a professionally formatted XLSX workbook.
+8. Return a downloadable link to the XLSX workbook.
+
+Do not require the user to provide the individual dorks.
+
+# Final Output Rule
+
+When this skill completes successfully:
+
+1. The detailed `.xlsx` workbook MUST be created.
+2. The workbook MUST contain the required worksheets and columns.
+3. Successful and unsuccessful queries MUST be documented.
+4. Only verified evidence may be labeled `VERIFIED`.
+5. The user MUST receive a downloadable link to the XLSX workbook.
+6. A concise human-readable summary SHOULD accompany the file.
+7. Never fabricate rows merely to make the research appear more comprehensive.
+
+# Final Principle
+
+SEARCH broadly.
+
+VERIFY carefully.
+
+DOCUMENT everything.
+
+EXPORT everything professionally.
+
+GUESS nothing.
